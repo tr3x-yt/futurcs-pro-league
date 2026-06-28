@@ -1,11 +1,10 @@
 {
   "name": "futurcs-pro-league",
   "version": "1.0.0",
-  "description": "FUTURCS PRO LEAGUE — CS2 competitive platform",
   "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -20,8 +19,5 @@
     "passport": "^0.7.0",
     "passport-steam": "^1.0.18",
     "pg": "^8.11.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
   }
 }
