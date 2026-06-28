@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false },
 });
 
 const PgSession = connectPgSimple(session);
@@ -23,15 +23,14 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.set('trust proxy', 1);
+
 app.use(session({
   store: new PgSession({ pool, createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || 'futurcs-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  },
+  cookie: { secure: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 },
 }));
 
 app.use(passport.initialize());
@@ -87,17 +86,15 @@ async function initDB() {
       id SERIAL PRIMARY KEY, email VARCHAR(255) UNIQUE NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  console.log('✅ Database tables ready');
+  console.log('✅ DB ready');
 }
 
 function requireAuth(req, res, next) {
   if (req.isAuthenticated()) return next();
   const token = req.headers.authorization?.split(' ')[1];
   if (token) {
-    try {
-      req.user = jwt.verify(token, process.env.JWT_SECRET || 'futurcs-jwt-secret');
-      return next();
-    } catch (_) {}
+    try { req.user = jwt.verify(token, process.env.JWT_SECRET || 'futurcs-jwt'); return next(); }
+    catch (_) {}
   }
   res.status(401).json({ error: 'Не авторизован' });
 }
@@ -117,11 +114,11 @@ app.post('/api/register', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(password, 12);
     const result = await pool.query(
-      `INSERT INTO players (nickname, email, password, created_at) VALUES ($1, $2, $3, NOW()) RETURNING id, nickname, email, rating, tier`,
+      `INSERT INTO players (nickname, email, password, created_at) VALUES ($1,$2,$3,NOW()) RETURNING id,nickname,email,rating,tier`,
       [nickname, email, hashed]
     );
     const user = result.rows[0];
-    const token = jwt.sign(user, process.env.JWT_SECRET || 'futurcs-jwt-secret', { expiresIn: '30d' });
+    const token = jwt.sign(user, process.env.JWT_SECRET || 'futurcs-jwt', { expiresIn: '30d' });
     res.json({ success: true, user, token });
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Email или никнейм уже заняты' });
@@ -140,32 +137,42 @@ app.post('/api/login', async (req, res) => {
     await pool.query('UPDATE players SET last_seen = NOW() WHERE id = $1', [user.id]);
     const token = jwt.sign(
       { id: user.id, nickname: user.nickname, email: user.email, rating: user.rating, tier: user.tier },
-      process.env.JWT_SECRET || 'futurcs-jwt-secret', { expiresIn: '30d' }
+      process.env.JWT_SECRET || 'futurcs-jwt', { expiresIn: '30d' }
     );
     res.json({ success: true, user: { id: user.id, nickname: user.nickname, rating: user.rating, tier: user.tier }, token });
   } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
 });
 
-app.get('/api/me', requireAuth, async (req, res) => {
+app.get('/api/me', async (req, res) => {
   try {
+    let userId = null;
+    if (req.isAuthenticated()) {
+      userId = req.user.id;
+    } else {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (token) {
+        try { userId = jwt.verify(token, process.env.JWT_SECRET || 'futurcs-jwt').id; } catch(_) {}
+      }
+    }
+    if (!userId) return res.status(401).json({ error: 'Не авторизован' });
     const result = await pool.query(
       'SELECT id, nickname, avatar_url, rating, tier, wins, losses, kills, deaths, created_at FROM players WHERE id = $1',
-      [req.user.id]
+      [userId]
     );
     res.json(result.rows[0] || {});
-  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 app.get('/api/leaderboard', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT id, nickname, avatar_url, rating, tier, wins, losses,
-        CASE WHEN (wins+losses) > 0 THEN ROUND(wins::numeric/(wins+losses)*100,1) ELSE 0 END as winrate,
-        CASE WHEN deaths > 0 THEN ROUND(kills::numeric/deaths, 2) ELSE kills END as kd
+        CASE WHEN (wins+losses)>0 THEN ROUND(wins::numeric/(wins+losses)*100,1) ELSE 0 END as winrate,
+        CASE WHEN deaths>0 THEN ROUND(kills::numeric/deaths,2) ELSE kills END as kd
       FROM players ORDER BY rating DESC LIMIT 50
     `);
     res.json(result.rows);
-  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
+  } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
 app.get('/api/stats', async (req, res) => {
@@ -173,7 +180,7 @@ app.get('/api/stats', async (req, res) => {
     const r = await pool.query(`
       SELECT COUNT(*) as total_players,
         COUNT(CASE WHEN last_seen > NOW() - INTERVAL '24 hours' THEN 1 END) as online_today,
-        SUM(wins + losses) as total_matches
+        COALESCE(SUM(wins+losses),0) as total_matches
       FROM players
     `);
     res.json(r.rows[0]);
@@ -186,24 +193,12 @@ app.post('/api/waitlist', async (req, res) => {
   try {
     await pool.query('INSERT INTO waitlist (email) VALUES ($1) ON CONFLICT DO NOTHING', [email]);
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
-});
-
-app.get('/api/matches/recent', async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM matches WHERE status = 'finished' ORDER BY finished_at DESC LIMIT 20`);
-    res.json(result.rows);
   } catch (err) { res.status(500).json({ error: 'Ошибка' }); }
 });
 
-// Отдаём HTML прямо из строки (без папки public)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.use(express.static(path.join(__dirname, '.')));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 initDB().then(() => {
-  app.listen(PORT, () => console.log(`🚀 FUTURCS running on port ${PORT}`));
-}).catch(err => {
-  console.error('❌ DB init failed:', err);
-  process.exit(1);
-});
+  app.listen(PORT, () => console.log(`🚀 FUTURCS on port ${PORT}`));
+}).catch(err => { console.error('❌', err); process.exit(1); });
