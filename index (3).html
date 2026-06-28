@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FUTURCS PRO LEAGUE — Профессиональная лига CS2</title>
+<meta name="description" content="FUTURCS PRO LEAGUE — первая открытая профессиональная лига CS2. Обычные игроки рядом с про. Скауты ищут таланты. Никаких ограничений по возрасту, полу или национальности.">
+<meta property="og:title" content="FUTURCS PRO LEAGUE">
+<meta property="og:description" content="Открытая про-лига CS2 для всех. Играй с профессионалами, попади в радар скаутов.
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg: #0B0E12;
+    --panel: #12161C;
+    --panel-2: #1A2027;
+    --line: #2A323D;
+    --ember: #FF6B35;
+    --teal: #2DD4BF;
+    --radar: #5FA86A;
+    --text: #E7ECEF;
+    --text-dim: #8B97A3;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Consolas", monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:48px 48px;
+    background-position:center;
+    background-attachment:fixed;
+  }
+  a{color:inherit; text-decoration:none;}
+
+  .hud-frame{position:relative; border:1px solid var(--line); border-radius:2px;}
+  .hud-frame::before, .hud-frame::after{
+    content:""; position:absolute; width:14px; height:14px;
+    border-color:var(--ember); pointer-events:none;
+  }
+  .hud-frame::before{top:-1px; left:-1px; border-top:2px solid var(--ember); border-left:2px solid var(--ember);}
+  .hud-frame::after{bottom:-1px; right:-1px; border-bottom:2px solid var(--ember); border-right:2px solid var(--ember);}
+
+  nav{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 32px; background:rgba(11,14,18,0.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .logo{font-weight:800; font-size:20px; letter-spacing:2px; text-transform:uppercase;}
+  .logo span{color:var(--ember);}
+  .navlinks{display:flex; gap:28px; font-size:13px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-dim);}
+  .navlinks a:hover{color:var(--teal);}
+  .navlinks a.active{color:var(--text);}
+
+  .ticker{
+    border-bottom:1px solid var(--line); background:var(--panel);
+    overflow:hidden; white-space:nowrap; padding:8px 0;
+  }
+  .ticker-inner{display:inline-block; animation:scroll 28s linear infinite; font-family:var(--mono); font-size:12px; color:var(--text-dim);}
+  .ticker-inner span{margin:0 28px;}
+  .ticker-inner .win{color:var(--radar);}
+  .ticker-inner .loss{color:var(--ember);}
+  @keyframes scroll{from{transform:translateX(0);} to{transform:translateX(-50%);}}
+
+  section{padding:96px 32px; max-width:1180px; margin:0 auto;}
+  .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:3px; text-transform:uppercase; color:var(--ember); margin-bottom:14px;}
+  h1{font-size:64px; line-height:1.02; font-weight:800; letter-spacing:-1px; text-transform:uppercase; margin:0 0 20px;}
+  h2{font-size:34px; font-weight:800; letter-spacing:-0.5px; text-transform:uppercase; margin:0 0 12px;}
+  .lead{color:var(--text-dim); font-size:17px; max-width:560px; line-height:1.6;}
+
+  .hero{display:grid; grid-template-columns:1.1fr 0.9fr; gap:48px; align-items:center; padding-top:64px;}
+  .btn{
+    display:inline-flex; align-items:center; gap:10px; padding:14px 26px;
+    background:var(--ember); color:#0B0E12; font-weight:700; text-transform:uppercase;
+    letter-spacing:1.5px; font-size:13px; border:none; border-radius:2px; cursor:pointer;
+    margin-top:28px; transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-2px); box-shadow:0 8px 24px rgba(255,107,53,0.25);}
+  .btn.secondary{background:transparent; color:var(--text); border:1px solid var(--line);}
+
+  /* Radar signature element */
+  .radar-wrap{position:relative; width:340px; height:340px; margin:0 auto;}
+  .radar-circle{
+    position:absolute; inset:0; border-radius:50%; border:1px solid var(--line);
+    background:radial-gradient(circle, rgba(95,168,106,0.08) 0%, transparent 70%);
+  }
+  .radar-circle.r2{inset:40px;}
+  .radar-circle.r3{inset:80px;}
+  .radar-circle.r4{inset:120px;}
+  .radar-sweep{
+    position:absolute; inset:0; border-radius:50%; overflow:hidden;
+    animation:spin 4s linear infinite;
+  }
+  .radar-sweep::before{
+    content:""; position:absolute; top:0; left:50%; width:50%; height:50%;
+    background:conic-gradient(from 0deg, rgba(95,168,106,0.55), transparent 60deg);
+    transform-origin:0% 0%;
+  }
+  @keyframes spin{from{transform:rotate(0deg);} to{transform:rotate(360deg);}}
+  .radar-label{
+    position:absolute; font-family:var(--mono); font-size:10px; color:var(--text-dim);
+    letter-spacing:1px;
+  }
+  .blip{
+    position:absolute; width:7px; height:7px; border-radius:50%; background:var(--teal);
+    box-shadow:0 0 8px var(--teal); opacity:0; animation:ping 1.8s ease-out forwards;
+  }
+  @keyframes ping{
+    0%{opacity:0; transform:scale(0.4);}
+    20%{opacity:1; transform:scale(1.1);}
+    100%{opacity:0; transform:scale(1);}
+  }
+  .queue-status{font-family:var(--mono); text-align:center; margin-top:18px; color:var(--text-dim); font-size:13px;}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:28px;}
+  .grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:36px;}
+  .grid-2{display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:36px;}
+
+  table{width:100%; border-collapse:collapse; margin-top:32px; font-size:14px;}
+  th{text-align:left; padding:12px 16px; color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:1.5px; border-bottom:1px solid var(--line);}
+  td{padding:14px 16px; border-bottom:1px solid var(--line); font-family:var(--mono);}
+  tr:hover td{background:var(--panel-2);}
+  .tier{
+    display:inline-block; padding:3px 10px; border-radius:2px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:1px;
+  }
+  .tier.apex{background:rgba(255,107,53,0.15); color:var(--ember);}
+  .tier.phantom{background:rgba(45,212,191,0.15); color:var(--teal);}
+  .tier.veteran{background:rgba(95,168,106,0.15); color:var(--radar);}
+  .tier.specialist{background:rgba(139,151,163,0.15); color:var(--text-dim);}
+  .delta-up{color:var(--radar);} .delta-down{color:var(--ember);}
+
+  .event-card{padding:24px; display:flex; flex-direction:column; gap:8px;}
+  .event-card .tag{font-family:var(--mono); font-size:11px; color:var(--teal); letter-spacing:1px; text-transform:uppercase;}
+  .event-card h3{margin:4px 0; font-size:19px; text-transform:uppercase;}
+  .event-card .meta{color:var(--text-dim); font-size:13px; font-family:var(--mono);}
+
+  .profile{display:grid; grid-template-columns:220px 1fr; gap:36px; align-items:start;}
+  .avatar{
+    width:100%; aspect-ratio:1; border-radius:4px; background:
+      linear-gradient(135deg, var(--panel-2), var(--panel));
+    border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+    font-size:48px; font-weight:800; color:var(--ember);
+  }
+  .stat-row{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:24px;}
+  .stat-box{background:var(--panel-2); border:1px solid var(--line); padding:16px; border-radius:3px;}
+  .stat-box .num{font-family:var(--mono); font-size:26px; font-weight:700;}
+  .stat-box .label{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:4px;}
+
+  .bars{display:flex; align-items:flex-end; gap:6px; height:80px; margin-top:24px;}
+  .bar{flex:1; background:var(--teal); border-radius:2px 2px 0 0; opacity:0.85;}
+
+  /* Stats banner */
+  .stats-bar{display:flex; justify-content:center; gap:64px; padding:28px 32px; border-bottom:1px solid var(--line); flex-wrap:wrap;}
+  .stats-bar .item{text-align:center;}
+  .stats-bar .num{font-family:var(--mono); font-size:28px; font-weight:800; color:var(--teal);}
+  .stats-bar .label{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1.5px; margin-top:4px;}
+
+  /* Why us */
+  .feature{padding:26px; display:flex; flex-direction:column; gap:10px;}
+  .feature .icon{width:38px; height:38px; border:1px solid var(--ember); border-radius:3px; display:flex; align-items:center; justify-content:center; color:var(--ember); font-family:var(--mono); font-weight:700;}
+  .feature h3{margin:6px 0 0; font-size:17px; text-transform:uppercase;}
+  .feature p{margin:0; color:var(--text-dim); font-size:14px; line-height:1.5;}
+
+  /* Steps */
+  .steps{display:grid; grid-template-columns:repeat(4,1fr); gap:20px; margin-top:36px;}
+  .step{position:relative; padding:24px 20px 20px; border:1px solid var(--line); border-radius:4px; background:var(--panel);}
+  .step .n{font-family:var(--mono); color:var(--ember); font-size:13px; letter-spacing:1px;}
+  .step h4{margin:10px 0 6px; font-size:15px; text-transform:uppercase;}
+  .step p{margin:0; font-size:13px; color:var(--text-dim); line-height:1.5;}
+
+  /* FAQ */
+  .faq-item{border-bottom:1px solid var(--line); padding:18px 0; cursor:pointer;}
+  .faq-q{display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:15px;}
+  .faq-q .plus{font-family:var(--mono); color:var(--ember); transition:transform .2s ease;}
+  .faq-item.open .plus{transform:rotate(45deg);}
+  .faq-a{max-height:0; overflow:hidden; transition:max-height .25s ease;}
+  .faq-a p{color:var(--text-dim); font-size:14px; line-height:1.6; margin:12px 0 0; max-width:680px;}
+
+  /* Signup */
+  .signup{display:flex; gap:12px; max-width:460px; margin-top:28px; flex-wrap:wrap;}
+  .signup input{
+    flex:1; min-width:220px; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:14px 16px; border-radius:2px; font-family:var(--sans); font-size:14px;
+  }
+  .signup input:focus{outline:1px solid var(--teal);}
+  .signup .btn{margin-top:0;}
+  .signup-msg{font-family:var(--mono); font-size:13px; color:var(--radar); margin-top:10px; min-height:18px;}
+
+  .navauth{display:flex; align-items:center; gap:18px;}
+  .navauth-link{font-size:13px; font-weight:600; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim);}
+  .navauth-link:hover{color:var(--text);}
+
+  /* Auth modal */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(5,6,8,0.75); backdrop-filter:blur(4px);
+    display:none; align-items:center; justify-content:center; z-index:100; padding:24px;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal{
+    width:100%; max-width:400px; background:var(--panel); border:1px solid var(--line);
+    border-radius:4px; padding:32px; position:relative;
+  }
+  .modal-close{position:absolute; top:16px; right:18px; cursor:pointer; color:var(--text-dim); font-size:20px; line-height:1;}
+  .modal-close:hover{color:var(--text);}
+  .modal-tabs{display:flex; gap:24px; margin-bottom:24px; border-bottom:1px solid var(--line);}
+  .modal-tab{padding-bottom:12px; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); cursor:pointer; border-bottom:2px solid transparent;}
+  .modal-tab.active{color:var(--text); border-color:var(--ember);}
+  .steam-btn{
+    width:100%; display:flex; align-items:center; justify-content:center; gap:10px;
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:13px; border-radius:2px; font-weight:600; font-size:14px; cursor:pointer; margin-bottom:18px;
+    transition:border-color .15s ease;
+  }
+  .steam-btn:hover{border-color:var(--teal);}
+  .modal-divider{display:flex; align-items:center; gap:10px; color:var(--text-dim); font-size:11px; text-transform:uppercase; letter-spacing:1px; margin-bottom:18px;}
+  .modal-divider::before, .modal-divider::after{content:""; flex:1; height:1px; background:var(--line);}
+  .modal-field{margin-bottom:14px;}
+  .modal-field label{display:block; font-size:12px; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;}
+  .modal-field input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:12px 14px; border-radius:2px; font-family:var(--sans); font-size:14px;
+  }
+  .modal-field input:focus{outline:1px solid var(--teal); border-color:var(--teal);}
+  .modal .btn{width:100%; justify-content:center; margin-top:6px;}
+  .modal-msg{font-family:var(--mono); font-size:12px; margin-top:14px; min-height:16px; text-align:center;}
+  .modal-fineprint{font-size:11px; color:var(--text-dim); margin-top:18px; text-align:center; line-height:1.5;}
+
+  /* ─── PRO LEAGUE SYSTEM ─── */
+  :root{
+    --gold: #F5C842;
+    --silver: #A8B8C8;
+    --bronze: #CD7F32;
+    --diamond: #A78BFA;
+  }
+
+  /* League tier badges */
+  .league-badge{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:4px 12px; border-radius:2px; font-size:11px; font-weight:800;
+    text-transform:uppercase; letter-spacing:2px;
+  }
+  .lb-pro{background:rgba(245,200,66,0.12); color:var(--gold); border:1px solid rgba(245,200,66,0.3);}
+  .lb-challenger{background:rgba(167,139,250,0.12); color:var(--diamond); border:1px solid rgba(167,139,250,0.3);}
+  .lb-main{background:rgba(45,212,191,0.12); color:var(--teal); border:1px solid rgba(45,212,191,0.3);}
+  .lb-open{background:rgba(95,168,106,0.12); color:var(--radar); border:1px solid rgba(95,168,106,0.3);}
+
+  /* League pyramid */
+  .pyramid{display:flex; flex-direction:column; gap:10px; max-width:720px; margin:36px auto 0;}
+  .pyramid-tier{
+    border:1px solid var(--line); border-radius:4px; padding:20px 28px;
+    background:var(--panel); position:relative; overflow:hidden; cursor:pointer;
+    transition:border-color .2s ease, transform .15s ease;
+  }
+  .pyramid-tier:hover{border-color:var(--ember); transform:translateX(4px);}
+  .pyramid-tier::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:4px;
+  }
+  .pt-pro::before{background:var(--gold);}
+  .pt-challenger::before{background:var(--diamond);}
+  .pt-main::before{background:var(--teal);}
+  .pt-open::before{background:var(--radar);}
+  .pt-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+  .pt-name{font-size:19px; font-weight:800; text-transform:uppercase;}
+  .pt-meta{font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:6px;}
+  .pt-slots{font-family:var(--mono); font-size:12px; color:var(--text-dim); text-align:right;}
+  .promo-label{
+    font-family:var(--mono); font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    display:flex; align-items:center; gap:5px; margin-top:10px;
+  }
+  .promo-up{color:var(--radar);} .promo-down{color:var(--ember);}
+
+  /* PRO LEAGUE main grid */
+  .pl-grid{display:grid; grid-template-columns:1fr 380px; gap:28px; margin-top:36px;}
+  .pl-standings{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:24px;}
+  .pl-sidebar{display:flex; flex-direction:column; gap:20px;}
+  .pl-card{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:20px;}
+  .pl-card h4{margin:0 0 14px; font-size:13px; text-transform:uppercase; letter-spacing:2px; color:var(--text-dim);}
+
+  .pl-table{width:100%; border-collapse:collapse; font-size:13px;}
+  .pl-table th{padding:8px 12px; text-align:left; color:var(--text-dim); font-size:10px; text-transform:uppercase; letter-spacing:1.5px; border-bottom:1px solid var(--line); font-weight:600;}
+  .pl-table td{padding:12px 12px; border-bottom:1px solid rgba(42,50,61,0.6); font-family:var(--mono);}
+  .pl-table tr:hover td{background:var(--panel-2);}
+  .pl-table .pos{color:var(--text-dim); width:30px;}
+  .pl-table .pname{font-family:var(--sans); font-weight:700; font-size:13px;}
+  .pl-table .pname small{display:block; font-weight:400; color:var(--text-dim); font-size:11px; font-family:var(--mono);}
+  .zone-pro td:first-child{border-left:3px solid var(--gold);}
+  .zone-chall td:first-child{border-left:3px solid var(--diamond);}
+  .zone-safe td:first-child{border-left:3px solid transparent;}
+  .zone-rel td:first-child{border-left:3px solid var(--ember);}
+
+  /* Scout panel */
+  .scout-card{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:3px;
+    padding:14px 16px; display:flex; align-items:center; gap:14px;
+    transition:border-color .2s ease;
+  }
+  .scout-card:hover{border-color:var(--teal);}
+  .scout-avatar{
+    width:40px; height:40px; border-radius:3px; border:1px solid var(--line);
+    background:linear-gradient(135deg, var(--panel), var(--panel-2));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:16px; flex-shrink:0;
+  }
+  .scout-info{flex:1;}
+  .scout-name{font-weight:700; font-size:13px;}
+  .scout-org{font-size:11px; font-family:var(--mono); color:var(--text-dim); margin-top:2px;}
+  .scout-watching{font-size:11px; font-family:var(--mono); color:var(--teal); margin-top:4px;}
+  .scout-eye{color:var(--ember); font-size:14px;}
+
+  /* Live match ticker inside league */
+  .match-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 0; border-bottom:1px solid var(--line); font-family:var(--mono); font-size:12px;
+  }
+  .match-row:last-child{border-bottom:none;}
+  .match-teams{display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; font-family:var(--sans);}
+  .match-score{
+    padding:3px 10px; border-radius:2px; background:var(--panel-2);
+    border:1px solid var(--line); font-weight:800;
+  }
+  .live-dot{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--ember); animation:livepulse 1.4s ease-in-out infinite; margin-right:4px;
+  }
+  @keyframes livepulse{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.8);}}
+
+  /* Inclusivity banner */
+  .incl-banner{
+    background:linear-gradient(135deg, rgba(45,212,191,0.06), rgba(95,168,106,0.06));
+    border:1px solid var(--teal); border-radius:4px; padding:36px 40px;
+    display:grid; grid-template-columns:1fr auto; gap:28px; align-items:center;
+    margin-top:48px; position:relative; overflow:hidden;
+  }
+  .incl-banner::before{
+    content:""; position:absolute; right:-40px; top:-40px;
+    width:180px; height:180px; border-radius:50%;
+    background:radial-gradient(circle, rgba(45,212,191,0.08), transparent 70%);
+  }
+  .incl-pills{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;}
+  .pill{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:7px 14px; border-radius:20px; font-size:12px; font-weight:700;
+    text-transform:uppercase; letter-spacing:1px; border:1px solid var(--line);
+    background:var(--panel);
+  }
+  .pill .dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .pill-age .dot{background:#F5C842;}
+  .pill-gender .dot{background:#A78BFA;}
+  .pill-nation .dot{background:#2DD4BF;}
+  .pill-skill .dot{background:#5FA86A;}
+  .incl-num{font-family:var(--mono); font-size:56px; font-weight:800; color:var(--teal); line-height:1; text-align:center;}
+  .incl-num-label{font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:2px; text-align:center; margin-top:4px;}
+
+  /* History block */
+  .history-grid{display:grid; grid-template-columns:1fr 1fr; gap:28px; margin-top:36px;}
+  .history-block{background:var(--panel); border:1px solid var(--line); border-radius:4px; padding:24px;}
+  .history-block h4{margin:0 0 16px; font-size:13px; text-transform:uppercase; letter-spacing:2px; color:var(--text-dim);}
+  .timeline{display:flex; flex-direction:column; gap:14px;}
+  .tl-item{display:flex; gap:14px; align-items:flex-start;}
+  .tl-dot{width:10px; height:10px; border-radius:50%; border:2px solid var(--ember); flex-shrink:0; margin-top:3px;}
+  .tl-dot.done{background:var(--ember);}
+  .tl-text{font-size:13px; color:var(--text-dim); line-height:1.5;}
+  .tl-text strong{color:var(--text); display:block; margin-bottom:2px;}
+
+  @media (max-width:880px){
+    .pl-grid{grid-template-columns:1fr;}
+    .incl-banner{grid-template-columns:1fr;}
+    .history-grid{grid-template-columns:1fr;}
+    .pyramid-tier:hover{transform:none;}
+  }
+
+
+  @media (max-width:880px){
+    .hero{grid-template-columns:1fr;}
+    h1{font-size:40px;}
+    .grid-3, .grid-2{grid-template-columns:1fr;}
+    .profile{grid-template-columns:1fr;}
+    .stat-row{grid-template-columns:repeat(2,1fr);}
+    .navlinks{display:none;}
+    .navauth-link{display:none;}
+    .modal{padding:24px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .radar-sweep{animation:none;}
+    .blip{animation:none; opacity:0.6;}
+    .ticker-inner{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" style="vertical-align:-5px; margin-right:8px;">
+      <polygon points="12,2 22,7 22,17 12,22 2,17 2,7" fill="none" stroke="#FF6B35" stroke-width="1.6"/>
+      <polygon points="12,8 17,10.5 17,13.5 12,16 7,13.5 7,10.5" fill="#FF6B35"/>
+    </svg>FUTUR<span>CS</span> <span style="font-size:11px; font-weight:600; letter-spacing:2px; color:var(--gold); margin-left:4px;">PRO LEAGUE</span>
+  </div>
+  <div class="navlinks">
+    <a href="#hero" class="active">Главная</a>
+    <a href="#pro-league" style="color:var(--gold);">Pro League</a>
+    <a href="#pyramid">Структура лиг</a>
+    <a href="#why">О платформе</a>
+    <a href="#rank">Рейтинг</a>
+    <a href="#profile">Игрок</a>
+  </div>
+  <div class="navauth" id="navAuth">
+    <a href="#" onclick="openAuth('login'); return false;" class="navauth-link">Войти</a>
+    <button class="btn" style="margin-top:0; padding:10px 18px;" onclick="openAuth('register'); return false;">Регистрация</button>
+  </div>
+  <div id="navUser" style="display:none; align-items:center; gap:12px;">
+    <img id="navAvatar" src="" width="32" height="32" style="border-radius:50%; border:1px solid var(--line);">
+    <span id="navNick" style="font-weight:700; font-size:14px;"></span>
+    <span id="navRating" style="font-family:var(--mono); color:var(--teal); font-size:13px;"></span>
+    <a href="/auth/logout" style="font-size:12px; color:var(--text-dim); margin-left:8px;">Выйти</a>
+  </div>
+</nav>
+
+<div id="profileBar" style="display:none; background:var(--panel); border-bottom:1px solid var(--line);">
+  <div style="max-width:1180px; margin:0 auto; padding:20px 32px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+    <img id="pbAvatar" src="" width="64" height="64" style="border-radius:4px; border:2px solid var(--ember);">
+    <div style="flex:1;">
+      <div style="font-family:var(--mono); font-size:10px; color:var(--ember); letter-spacing:2px; margin-bottom:3px;">// ТВОЙ ПРОФИЛЬ</div>
+      <div style="font-size:20px; font-weight:800;" id="pbNick"></div>
+      <div style="font-size:12px; color:var(--text-dim);" id="pbSince"></div>
+    </div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+      <div style="text-align:center; background:var(--panel-2); border:1px solid var(--line); padding:12px 18px; border-radius:4px; min-width:72px;">
+        <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--teal);" id="pbRating">1000</div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px;">Рейтинг</div>
+      </div>
+      <div style="text-align:center; background:var(--panel-2); border:1px solid var(--line); padding:12px 18px; border-radius:4px; min-width:72px;">
+        <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--radar);" id="pbWins">0</div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px;">Побед</div>
+      </div>
+      <div style="text-align:center; background:var(--panel-2); border:1px solid var(--line); padding:12px 18px; border-radius:4px; min-width:72px;">
+        <div style="font-family:var(--mono); font-size:20px; font-weight:800; color:var(--ember);" id="pbLosses">0</div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px;">Поражений</div>
+      </div>
+      <div style="text-align:center; background:var(--panel-2); border:1px solid var(--line); padding:12px 18px; border-radius:4px; min-width:72px;">
+        <div style="font-family:var(--mono); font-size:20px; font-weight:800; text-transform:uppercase;" id="pbTier">—</div>
+        <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; margin-top:2px;">Дивизион</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ticker">
+  <div class="ticker-inner" id="tickerInner"></div>
+</div>
+
+<div class="stats-bar">
+  <div class="item"><div class="num">128 тик</div><div class="label">Серверы</div></div>
+  <div class="item"><div class="num">&lt; 40мс</div><div class="label">Средний пинг EU</div></div>
+  <div class="item"><div class="num" style="color:var(--gold);">4 дивизиона</div><div class="label">Структура лиг</div></div>
+  <div class="item"><div class="num" style="color:var(--diamond);">Scout API</div><div class="label">Скаутинг игроков</div></div>
+  <div class="item"><div class="num">24/7</div><div class="label">Античит-мониторинг</div></div>
+</div>
+
+<section id="hero" class="hero">
+  <div>
+    <div class="eyebrow">// FUTURCS PRO LEAGUE — открытая профессиональная лига CS2</div>
+    <h1>Играй как про.<br>Стань про.</h1>
+    <p class="lead">Первая в мире лига, где обычный игрок может выйти на одну карту с профессионалами — и быть замеченным скаутами. Без ограничений по возрасту, полу и национальности.</p>
+    <a href="#queue" class="btn">Войти в очередь →</a>
+    <a href="#rank" class="btn secondary">Топ игроков</a>
+    <div class="signup">
+      <input type="email" id="signupEmail" placeholder="you@email.com">
+      <button class="btn" onclick="submitSignup()">Получить ранний доступ</button>
+    </div>
+    <div class="signup-msg" id="signupMsg"></div>
+  </div>
+  <div class="hud-frame" style="padding:30px;">
+    <div class="radar-wrap">
+      <div class="radar-circle"></div>
+      <div class="radar-circle r2"></div>
+      <div class="radar-circle r3"></div>
+      <div class="radar-circle r4"></div>
+      <div class="radar-sweep"></div>
+      <div class="radar-label" style="top:6px; left:50%; transform:translateX(-50%);">LONG</div>
+      <div class="radar-label" style="bottom:6px; left:50%; transform:translateX(-50%);">B SITE</div>
+      <div class="radar-label" style="top:50%; left:4px; transform:translateY(-50%);">MID</div>
+      <div class="radar-label" style="top:50%; right:4px; transform:translateY(-50%);">A SITE</div>
+      <div id="blipLayer" style="position:absolute; inset:0;"></div>
+    </div>
+  </div>
+</section>
+
+<section id="queue">
+  <div class="eyebrow">01 — Matchmaking</div>
+  <h2>Очередь FUTURCS</h2>
+  <p class="lead">Поиск соперников по рейтингу FP, с защитой от читеров и сбалансированными командами 5×5.</p>
+  <div class="panel hud-frame" style="margin-top:32px; text-align:center; padding:40px;">
+    <button class="btn" id="queueBtn" onclick="startQueue()">Найти матч</button>
+    <div class="queue-status" id="queueStatus">Не в очереди</div>
+    <div class="queue-status" style="margin-top:14px;">Нет аккаунта? <a href="#" onclick="openAuth('register'); return false;" style="color:var(--teal);">Зарегистрироваться</a></div>
+  </div>
+</section>
+
+<section id="rank">
+  <div class="eyebrow">02 — Rating</div>
+  <h2>Таблица рангов</h2>
+  <p class="lead">Рейтинг FP пересчитывается после каждого матча на основе разницы силы команд и индивидуального вклада.</p>
+  <table>
+    <tr><th>#</th><th>Игрок</th><th>Тир</th><th>FP Rating</th><th>Изменение</th></tr>
+    <tr><td>1</td><td>nova_</td><td><span class="tier apex">Apex</span></td><td>3142</td><td class="delta-up">+24</td></tr>
+    <tr><td>2</td><td>ksh1ne</td><td><span class="tier apex">Apex</span></td><td>3081</td><td class="delta-down">−9</td></tr>
+    <tr><td>3</td><td>fume</td><td><span class="tier phantom">Phantom</span></td><td>2877</td><td class="delta-up">+16</td></tr>
+    <tr><td>4</td><td>relic.</td><td><span class="tier phantom">Phantom</span></td><td>2790</td><td class="delta-up">+11</td></tr>
+    <tr><td>5</td><td>quiet_storm</td><td><span class="tier veteran">Veteran</span></td><td>2455</td><td class="delta-down">−5</td></tr>
+    <tr><td>6</td><td>brk</td><td><span class="tier specialist">Specialist</span></td><td>1980</td><td class="delta-up">+19</td></tr>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     PRO LEAGUE — MAIN SECTION
+════════════════════════════════════════════════ -->
+<section id="pro-league">
+  <div class="eyebrow">03 — FUTURCS Pro League</div>
+  <h2>Pro League — сезон I</h2>
+  <p class="lead">Лига по образцу FACEIT Pro League из CS:GO — возрождена для CS2. Каждый может заработать место в топ-дивизионе рядом с профессиональными игроками.</p>
+
+  <div class="pl-grid">
+    <!-- Standings table -->
+    <div class="pl-standings hud-frame">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+        <div>
+          <div style="font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:2px;">
+            <span class="league-badge lb-pro">★ Pro Division</span>
+          </div>
+          <div style="font-family:var(--mono); font-size:11px; color:var(--text-dim); margin-top:6px;">Сезон I · Неделя 7 из 10 · 16 команд</div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--gold);"><span style="width:10px;height:10px;border-radius:2px;background:rgba(245,200,66,0.3);display:inline-block;"></span> Плей-офф</span>
+          <span style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--ember);"><span style="width:10px;height:10px;border-radius:2px;background:rgba(255,107,53,0.3);display:inline-block;"></span> Relegation</span>
+        </div>
+      </div>
+
+      <table class="pl-table">
+        <tr>
+          <th>#</th><th>Команда</th><th>И</th><th>В</th><th>П</th><th>Раунды</th><th>Очки</th>
+        </tr>
+        <!-- Playoff zone -->
+        <tr class="zone-pro">
+          <td class="pos">1</td>
+          <td><div class="pname">NovaForce<small>nova_ · ksh1ne · fume · relic. · quiet_storm</small></div></td>
+          <td>18</td><td>14</td><td>4</td><td class="delta-up">+87</td><td style="color:var(--gold); font-weight:800;">42</td>
+        </tr>
+        <tr class="zone-pro">
+          <td class="pos">2</td>
+          <td><div class="pname">GhxstAim<small>ghxst · lumen · orbit · brk · nova_sec</small></div></td>
+          <td>18</td><td>12</td><td>6</td><td class="delta-up">+54</td><td style="color:var(--gold); font-weight:800;">36</td>
+        </tr>
+        <tr class="zone-pro">
+          <td class="pos">3</td>
+          <td><div class="pname">StormFive<small>storm · reX · _blank · crypt · ember1</small></div></td>
+          <td>18</td><td>11</td><td>7</td><td class="delta-up">+31</td><td style="color:var(--gold); font-weight:800;">33</td>
+        </tr>
+        <tr class="zone-pro">
+          <td class="pos">4</td>
+          <td><div class="pname">Vortex<small>vrtx · nils · mara · ozone · shad0w</small></div></td>
+          <td>18</td><td>10</td><td>8</td><td class="delta-up">+18</td><td style="color:var(--gold); font-weight:800;">30</td>
+        </tr>
+        <!-- Safe zone -->
+        <tr class="zone-safe">
+          <td class="pos" style="color:var(--text-dim);">5</td>
+          <td><div class="pname">Pulsar<small>puls · wraith · freeze · dex · coma</small></div></td>
+          <td>18</td><td>9</td><td>9</td><td style="color:var(--text-dim);">±0</td><td>27</td>
+        </tr>
+        <tr class="zone-safe">
+          <td class="pos" style="color:var(--text-dim);">6</td>
+          <td><div class="pname">IronClad<small>irn · mxr · slick · tempo · fade</small></div></td>
+          <td>18</td><td>8</td><td>10</td><td class="delta-down">−12</td><td>24</td>
+        </tr>
+        <tr class="zone-safe">
+          <td class="pos" style="color:var(--text-dim);">7</td>
+          <td><div class="pname">Revenant<small>rev · ghost5 · lynx · shard · kira</small></div></td>
+          <td>18</td><td>7</td><td>11</td><td class="delta-down">−29</td><td>21</td>
+        </tr>
+        <!-- Relegation zone -->
+        <tr class="zone-rel">
+          <td class="pos">8</td>
+          <td><div class="pname" style="color:var(--ember);">Cipher<small style="color:var(--text-dim);">cipher · nul · bx · atroX · wren</small></div></td>
+          <td>18</td><td>4</td><td>14</td><td class="delta-down">−52</td><td style="color:var(--ember);">12</td>
+        </tr>
+      </table>
+
+      <div style="display:flex; gap:16px; margin-top:14px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:11px; font-family:var(--mono); color:var(--text-dim);">
+          <span style="display:inline-block; width:3px; height:14px; background:var(--gold); border-radius:1px;"></span> Места 1–4: плей-офф + гарантированное место в следующем сезоне
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; font-size:11px; font-family:var(--mono); color:var(--text-dim);">
+          <span style="display:inline-block; width:3px; height:14px; background:var(--ember); border-radius:1px;"></span> Место 8: relegation match с Challenger Division
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="pl-sidebar">
+
+      <!-- Live matches -->
+      <div class="pl-card">
+        <h4>🔴 Матчи сейчас</h4>
+        <div class="match-row">
+          <div class="match-teams">NovaForce <span style="color:var(--text-dim); font-size:11px;">vs</span> GhxstAim</div>
+          <div><span class="live-dot"></span><span class="match-score" style="color:var(--teal);">14:11</span></div>
+        </div>
+        <div class="match-row">
+          <div class="match-teams">StormFive <span style="color:var(--text-dim); font-size:11px;">vs</span> Vortex</div>
+          <div><span class="live-dot"></span><span class="match-score" style="color:var(--teal);">8:12</span></div>
+        </div>
+        <div class="match-row">
+          <div style="color:var(--text-dim); font-size:12px; font-family:var(--mono);">Следующий матч через</div>
+          <div style="font-family:var(--mono); font-size:13px; font-weight:800; color:var(--ember);" id="nextMatchTimer">02:14:37</div>
+        </div>
+      </div>
+
+      <!-- Scout panel -->
+      <div class="pl-card">
+        <h4>👁 Скауты наблюдают</h4>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div class="scout-card">
+            <div class="scout-avatar" style="color:var(--teal);">N</div>
+            <div class="scout-info">
+              <div class="scout-name">Niklas "NiKo_Scout" Berg</div>
+              <div class="scout-org">NAVI Talent Academy</div>
+              <div class="scout-watching">Следит за: nova_, quiet_storm</div>
+            </div>
+            <div class="scout-eye">👁</div>
+          </div>
+          <div class="scout-card">
+            <div class="scout-avatar" style="color:var(--gold);">F</div>
+            <div class="scout-info">
+              <div class="scout-name">Florian "Flo" Müller</div>
+              <div class="scout-org">BIG Clan Roster Dev</div>
+              <div class="scout-watching">Следит за: ghxst, lumen</div>
+            </div>
+            <div class="scout-eye">👁</div>
+          </div>
+          <div class="scout-card">
+            <div class="scout-avatar" style="color:var(--diamond);">A</div>
+            <div class="scout-info">
+              <div class="scout-name">Alex "Arek" Nowak</div>
+              <div class="scout-org">Независимый скаут</div>
+              <div class="scout-watching">Следит за: fume</div>
+            </div>
+            <div class="scout-eye">👁</div>
+          </div>
+        </div>
+        <div style="margin-top:14px; padding:12px; background:var(--panel-2); border-radius:3px; font-size:12px; color:var(--text-dim); font-family:var(--mono); line-height:1.5;">
+          Каждый матч Pro League записывается и доступен скаутам организаций. Твоя карточка игрока видна всем аккредитованным скаутам автоматически.
+        </div>
+      </div>
+
+      <!-- Promo/Relegation info -->
+      <div class="pl-card" style="border-color:rgba(245,200,66,0.3);">
+        <h4 style="color:var(--gold);">Промоушн / Relegation</h4>
+        <div style="display:flex; flex-direction:column; gap:8px; font-size:13px; color:var(--text-dim); line-height:1.5;">
+          <div style="display:flex; gap:8px; align-items:flex-start;">
+            <span style="color:var(--radar); font-size:16px; flex-shrink:0;">↑</span>
+            <span>Топ-2 Challenger попадают в Pro без promotion match</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start;">
+            <span style="color:var(--teal); font-size:16px; flex-shrink:0;">⇄</span>
+            <span>Места 3–4 Challenger играют promotion match против 7–8 Pro</span>
+          </div>
+          <div style="display:flex; gap:8px; align-items:flex-start;">
+            <span style="color:var(--ember); font-size:16px; flex-shrink:0;">↓</span>
+            <span>Последнее место Pro автоматически вылетает в Challenger</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     LEAGUE PYRAMID — STRUCTURE
+════════════════════════════════════════════════ -->
+<section id="pyramid">
+  <div class="eyebrow">04 — Структура лиг</div>
+  <h2>Четыре дивизиона — один путь наверх</h2>
+  <p class="lead">Как в классическом FACEIT Pro League в CS:GO — открытый путь от любительского уровня до профессиональной сцены. Достаточно быть хорошим игроком.</p>
+
+  <div class="pyramid">
+    <!-- Pro -->
+    <div class="pyramid-tier pt-pro">
+      <div class="pt-head">
+        <div>
+          <span class="league-badge lb-pro">★ Pro Division</span>
+          <div class="pt-name" style="margin-top:8px; color:var(--gold);">Профессиональная лига</div>
+          <div class="pt-meta">16 команд · сезон 10 недель · призовой фонд $50 000</div>
+          <div class="promo-label promo-down">↓ Relegation: последнее место → Challenger</div>
+        </div>
+        <div class="pt-slots">
+          <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--gold);">16</div>
+          <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">команд</div>
+          <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">Мин. FP Rating: 2800</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Challenger -->
+    <div class="pyramid-tier pt-challenger">
+      <div class="pt-head">
+        <div>
+          <span class="league-badge lb-challenger">Challenger Division</span>
+          <div class="pt-name" style="margin-top:8px; color:var(--diamond);">Претендент</div>
+          <div class="pt-meta">32 команды · 3 группы · призовой фонд $10 000</div>
+          <div class="promo-label">
+            <span class="promo-up">↑ Топ-4 → promotion match с Pro</span>
+            <span style="margin:0 8px; color:var(--line);">|</span>
+            <span class="promo-down">↓ Последние 2 → Main</span>
+          </div>
+        </div>
+        <div class="pt-slots">
+          <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--diamond);">32</div>
+          <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">команды</div>
+          <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">Мин. FP Rating: 2200</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="pyramid-tier pt-main">
+      <div class="pt-head">
+        <div>
+          <span class="league-badge lb-main">Main Division</span>
+          <div class="pt-name" style="margin-top:8px; color:var(--teal);">Основной</div>
+          <div class="pt-meta">128 команд · 8 групп · ежемесячный сезон</div>
+          <div class="promo-label">
+            <span class="promo-up">↑ Победитель группы → Challenger</span>
+            <span style="margin:0 8px; color:var(--line);">|</span>
+            <span class="promo-down">↓ Последнее место → Open</span>
+          </div>
+        </div>
+        <div class="pt-slots">
+          <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--teal);">128</div>
+          <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">команд</div>
+          <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">Мин. FP Rating: 1600</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Open -->
+    <div class="pyramid-tier pt-open">
+      <div class="pt-head">
+        <div>
+          <span class="league-badge lb-open">Open Division</span>
+          <div class="pt-name" style="margin-top:8px; color:var(--radar);">Открытый</div>
+          <div class="pt-meta">Неограниченное число команд · квалификационные матчи</div>
+          <div class="promo-label">
+            <span class="promo-up">↑ Топ-команды Open → Main Division</span>
+          </div>
+        </div>
+        <div class="pt-slots">
+          <div style="font-family:var(--mono); font-size:24px; font-weight:800; color:var(--radar);">∞</div>
+          <div style="font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;">команд</div>
+          <div style="margin-top:8px; font-size:11px; color:var(--text-dim);">Вход: любой FP Rating</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inclusivity banner -->
+  <div class="incl-banner">
+    <div>
+      <div class="eyebrow" style="margin-bottom:10px;">// Наше главное отличие от FACEIT</div>
+      <h2 style="font-size:26px; margin:0 0 10px;">Открыто для каждого — без исключений</h2>
+      <p style="color:var(--text-dim); font-size:15px; line-height:1.6; margin:0 0 18px; max-width:560px;">
+        FACEIT Pro League была закрыта для большинства игроков. FUTURCS Pro League — нет. Мы убрали любые барьеры, кроме одного: умения играть.
+      </p>
+      <div class="incl-pills">
+        <div class="pill pill-age"><span class="dot"></span> Любой возраст</div>
+        <div class="pill pill-gender"><span class="dot"></span> Любой пол</div>
+        <div class="pill pill-nation"><span class="dot"></span> Любая национальность</div>
+        <div class="pill pill-skill"><span class="dot"></span> Любой стартовый уровень</div>
+      </div>
+    </div>
+    <div style="text-align:center; flex-shrink:0;">
+      <div class="incl-num">100%</div>
+      <div class="incl-num-label">открытая<br>квалификация</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     HISTORIA — FPL reference + roadmap
+════════════════════════════════════════════════ -->
+<section id="history">
+  <div class="eyebrow">05 — Вдохновение и путь</div>
+  <h2>Почему мы возродили FPL</h2>
+  <p class="lead">FACEIT Pro League в CS:GO была легендарной — она позволяла обычным игрокам попасть на одну карту с профессионалами. После выхода CS2 это исчезло. Мы возвращаем это.</p>
+
+  <div class="history-grid">
+    <div class="history-block">
+      <h4>Чем была FACEIT Pro League</h4>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot done"></div>
+          <div class="tl-text"><strong>Смешанные лобби</strong>Обычные топ-игроки могли играть в одном лобби с действующими профессионалами s1mple, NiKo, device.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done"></div>
+          <div class="tl-text"><strong>Открытый путь</strong>Через квалификации можно было дорасти от обычного игрока до Pro-лиги без крупной организации.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done"></div>
+          <div class="tl-text"><strong>Скаутинг</strong>Скауты крупных организаций активно следили за лигой и брали игроков на контракт.</div>
+        </div>
+        <div class="tl-item" style="opacity:0.4;">
+          <div class="tl-dot"></div>
+          <div class="tl-text"><strong>CS2 — пусто</strong>После перехода на CS2 этот формат исчез. Профессионалы закрылись в своих лобби. Путь наверх пропал.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="history-block">
+      <h4>Роадмап FUTURCS PL</h4>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-dot done"></div>
+          <div class="tl-text"><strong style="color:var(--radar);">✓ Сейчас — Open Division</strong>Открытые квалификации, ежедневные матчи, FP Rating для всех участников.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot done"></div>
+          <div class="tl-text"><strong style="color:var(--radar);">✓ Сейчас — Main & Challenger</strong>Первые два сезона запущены, таблицы обновляются в реальном времени.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot" style="border-color:var(--gold);"></div>
+          <div class="tl-text"><strong style="color:var(--gold);">→ Q3 2026 — Pro Division с призовым фондом</strong>16 сильнейших команд платформы, прямые трансляции, открытый скаутинг.</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot"></div>
+          <div class="tl-text"><strong>Q4 2026 — Pro Player Invites</strong>Приглашения действующим профессионалам для игры в Pro Division рядом с лучшими игроками платформы.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="profile">
+  <div class="eyebrow">04 — Player Card</div>
+  <h2>Карточка игрока</h2>
+  <div class="profile" style="margin-top:32px;">
+    <div class="avatar hud-frame">N</div>
+    <div>
+      <h3 style="margin:0; text-transform:uppercase; font-size:24px;">nova_ <span class="tier apex" style="margin-left:8px;">Apex</span></h3>
+      <p class="lead" style="margin-top:6px;">FP Rating 3142 · 412 матчей · в FUTURCS с 2024</p>
+      <div class="stat-row">
+        <div class="stat-box"><div class="num">1.34</div><div class="label">K/D</div></div>
+        <div class="stat-box"><div class="num">64%</div><div class="label">Win Rate</div></div>
+        <div class="stat-box"><div class="num">81.2</div><div class="label">ADR</div></div>
+        <div class="stat-box"><div class="num">112</div><div class="label">Ping ms</div></div>
+      </div>
+      <div class="bars" id="ratingBars"></div>
+      <div class="queue-status" style="text-align:left;">Динамика FP Rating за последние 12 матчей</div>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="eyebrow">00 — Why FUTURCS</div>
+  <h2>Чем мы отличаемся</h2>
+  <p class="lead">FACEIT Pro League умерла с выходом CS2. Мы строим её замену — честнее, открытее, доступнее.</p>
+  <div class="grid-3">
+    <div class="panel feature"><div class="icon">FP</div><h3>Честный рейтинг</h3><p>Открытая формула FP Rating — видно, за что прибавили или сняли очки. Рейтинг определяет дивизион, а не деньги.</p></div>
+    <div class="panel feature"><div class="icon" style="border-color:var(--gold); color:var(--gold);">PL</div><h3>Реальная про-лига</h3><p>Четыре дивизиона с промоушн и релегейшн — как в спортивной лиге. Обычный игрок может дойти до Pro Division через открытую квалификацию.</p></div>
+    <div class="panel feature"><div class="icon" style="border-color:var(--diamond); color:var(--diamond);">SC</div><h3>Скаутинг игроков</h3><p>Скауты организаций аккредитованы на платформе и следят за матчами в реальном времени. Демки и статистика доступны автоматически.</p></div>
+    <div class="panel feature"><div class="icon">AC</div><h3>Античит</h3><p>Автоматический и ручной разбор подозрительных матчей, бан читеров без долгого ожидания.</p></div>
+    <div class="panel feature"><div class="icon" style="border-color:var(--teal); color:var(--teal);">∞</div><h3>Без ограничений</h3><p>Никаких барьеров по возрасту, полу или национальности. Единственный критерий — умение играть. Точка.</p></div>
+    <div class="panel feature"><div class="icon">5v5</div><h3>Баланс команд</h3><p>Подбор учитывает рейтинг, роли и форму команды. Никаких разгромов 16:2 из-за несбалансированного матчмейкинга.</p></div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="eyebrow">— Onboarding</div>
+  <h2>Как начать</h2>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><h4>Регистрация</h4><p>Вход через Steam, без лишних форм.</p></div>
+    <div class="step"><div class="n">02</div><h4>Калибровка</h4><p>5 матчей, чтобы определить стартовый FP Rating.</p></div>
+    <div class="step"><div class="n">03</div><h4>Очередь</h4><p>Подбор соперников по рейтингу и роли.</p></div>
+    <div class="step"><div class="n">04</div><h4>Рост</h4><p>Поднимайтесь по тирам, попадайте в лиги и турниры.</p></div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="eyebrow">— FAQ</div>
+  <h2>Частые вопросы</h2>
+  <div style="margin-top:20px;">
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q"><span>Это официальный продукт Valve или FACEIT?</span><span class="plus">+</span></div>
+      <div class="faq-a"><p>Нет. FUTURCS — полностью независимая платформа сообщества, не связанная ни с Valve, ни с FACEIT / ESL. Мы вдохновлены форматом FACEIT Pro League из CS:GO, но строим собственную независимую экосистему.</p></div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q"><span>Может ли 14-летний игрок участвовать в Pro League?</span><span class="plus">+</span></div>
+      <div class="faq-a"><p>Да. Мы принципиально убрали возрастной барьер — единственный критерий для участия в любом дивизионе — это FP Rating команды. Если ты достаточно хорош, ты в лиге.</p></div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q"><span>Как скауты находят игроков?</span><span class="plus">+</span></div>
+      <div class="faq-a"><p>Аккредитованные скауты получают доступ к карточкам игроков, статистике и автоматическим демкам из матчей. Они могут фильтровать игроков по роли, рейтингу, стране и проводить наблюдение в режиме реального времени. Если скаут следит за тобой — ты увидишь это в своём профиле.</p></div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q"><span>Как работает продвижение между дивизионами?</span><span class="plus">+</span></div>
+      <div class="faq-a"><p>Open Division → Main: по итогам квалификационных матчей. Main → Challenger: победитель группы. Challenger → Pro: топ-2 напрямую, места 3–4 через promotion match. Вылет происходит автоматически по итогам сезона.</p></div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q"><span>Нужно ли платить за участие в лиге?</span><span class="plus">+</span></div>
+      <div class="faq-a"><p>Open Division и базовый матчмейкинг бесплатны. Участие в Main, Challenger и Pro Division требует активной подписки, условия и цены будут объявлены перед запуском следующего сезона.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="modal-backdrop" id="authBackdrop" onclick="if(event.target===this) closeAuth()">
+  <div class="modal hud-frame">
+    <div class="modal-close" onclick="closeAuth()">×</div>
+    <div class="modal-tabs">
+      <div class="modal-tab active" id="tabLogin" onclick="switchTab('login')">Вход</div>
+      <div class="modal-tab" id="tabRegister" onclick="switchTab('register')">Регистрация</div>
+    </div>
+
+    <button class="steam-btn" onclick="steamAuth()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+      Продолжить через Steam
+    </button>
+    <div class="modal-divider">или email</div>
+
+    <div id="formLogin">
+      <div class="modal-field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@email.com"></div>
+      <div class="modal-field"><label>Пароль</label><input type="password" id="loginPass" placeholder="••••••••"></div>
+      <button class="btn" onclick="submitAuth('login')">Войти</button>
+    </div>
+
+    <div id="formRegister" style="display:none;">
+      <div class="modal-field"><label>Никнейм</label><input type="text" id="regNick" placeholder="nova_"></div>
+      <div class="modal-field"><label>Email</label><input type="email" id="regEmail" placeholder="you@email.com"></div>
+      <div class="modal-field"><label>Пароль</label><input type="password" id="regPass" placeholder="минимум 8 символов"></div>
+      <button class="btn" onclick="submitAuth('register')">Создать аккаунт</button>
+    </div>
+
+    <div class="modal-msg" id="authMsg"></div>
+    <div class="modal-fineprint">Вход через Steam используется только для подтверждения личности игрока. FUTURCS не связан с Valve.</div>
+  </div>
+</div>
+
+<footer>
+  FUTURCS PRO LEAGUE — независимая платформа. Не связана с Valve, FACEIT, ESL или другими издателями и сервисами матчмейкинга.<br>
+  <span style="color:var(--teal); margin-top:6px; display:block;">Открыто для всех — без ограничений по возрасту, полу и национальности.</span>
+</footer>
+
+<script>
+  // Ticker feed
+  const matches = [
+    {a:'nova_', b:'ksh1ne', score:'16:11', win:true},
+    {a:'fume', b:'relic.', score:'13:16', win:false},
+    {a:'quiet_storm', b:'brk', score:'16:9', win:true},
+    {a:'ghxst', b:'lumen', score:'14:16', win:false},
+    {a:'orbit', b:'nova_', score:'16:14', win:true},
+  ];
+  let tickerHTML = '';
+  for(let i=0;i<2;i++){
+    matches.forEach(m=>{
+      tickerHTML += `<span>${m.a} <span class="${m.win?'win':'loss'}">${m.score}</span> ${m.b}</span>`;
+    });
+  }
+  document.getElementById('tickerInner').innerHTML = tickerHTML;
+
+  // Radar blips
+  const blipLayer = document.getElementById('blipLayer');
+  function spawnBlip(){
+    const b = document.createElement('div');
+    b.className = 'blip';
+    const angle = Math.random()*2*Math.PI;
+    const radius = 60 + Math.random()*100;
+    const x = 170 + radius*Math.cos(angle) - 3.5;
+    const y = 170 + radius*Math.sin(angle) - 3.5;
+    b.style.left = x+'px';
+    b.style.top = y+'px';
+    blipLayer.appendChild(b);
+    setTimeout(()=>b.remove(), 1800);
+  }
+  setInterval(spawnBlip, 700);
+
+  // Queue simulation
+  let queueing = false, queueTime = 0, queueInterval;
+  function startQueue(){
+    const btn = document.getElementById('queueBtn');
+    const status = document.getElementById('queueStatus');
+    if(queueing){
+      clearInterval(queueInterval);
+      queueing = false; queueTime = 0;
+      btn.textContent = 'Найти матч';
+      status.textContent = 'Не в очереди';
+      return;
+    }
+    queueing = true; queueTime = 0;
+    btn.textContent = 'Покинуть очередь';
+    status.textContent = 'Поиск соперников... 0:00';
+    queueInterval = setInterval(()=>{
+      queueTime++;
+      const m = Math.floor(queueTime/60), s = queueTime%60;
+      status.textContent = `Поиск соперников... ${m}:${s.toString().padStart(2,'0')}`;
+      if(queueTime === 4){
+        clearInterval(queueInterval);
+        queueing = false;
+        btn.textContent = 'Найти матч';
+        status.innerHTML = 'Матч найден — карта <b style="color:var(--teal)">Mirage</b>, 10 игроков подключаются...';
+      }
+    },1000);
+  }
+
+  // Rating bars
+  const bars = document.getElementById('ratingBars');
+  const vals = [60,65,58,70,72,68,80,76,85,82,90,95];
+  vals.forEach(v=>{
+    const d = document.createElement('div');
+    d.className = 'bar';
+    d.style.height = v+'%';
+    bars.appendChild(d);
+  });
+
+  // FAQ accordion
+  function toggleFaq(el){
+    const wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i=>{
+      i.classList.remove('open');
+      i.querySelector('.faq-a').style.maxHeight = null;
+    });
+    if(!wasOpen){
+      el.classList.add('open');
+      const a = el.querySelector('.faq-a');
+      a.style.maxHeight = a.scrollHeight + 'px';
+    }
+  }
+
+  // Signup form (front-end only — no backend wired up yet)
+  async function submitSignup(){
+    const input = document.getElementById('signupEmail');
+    const msg = document.getElementById('signupMsg');
+    const val = input.value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){
+      msg.style.color = 'var(--ember)';
+      msg.textContent = 'Введите корректный email';
+      return;
+    }
+    msg.style.color = 'var(--text-dim)';
+    msg.textContent = 'Сохраняем...';
+    try {
+      const r = await fetch('/api/waitlist', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ email: val })
+      });
+      if (r.ok) {
+        msg.style.color = 'var(--radar)';
+        msg.textContent = 'Готово — сообщим о запуске первыми.';
+        input.value = '';
+      } else {
+        msg.style.color = 'var(--ember)';
+        msg.textContent = 'Этот email уже зарегистрирован.';
+      }
+    } catch(_) {
+      msg.style.color = 'var(--ember)';
+      msg.textContent = 'Ошибка соединения.';
+    }
+  }
+
+  // Auth modal
+  function openAuth(tab){
+    document.getElementById('authBackdrop').classList.add('show');
+    switchTab(tab);
+    document.getElementById('authMsg').textContent = '';
+  }
+  function closeAuth(){
+    document.getElementById('authBackdrop').classList.remove('show');
+  }
+  function switchTab(tab){
+    const isLogin = tab === 'login';
+    document.getElementById('tabLogin').classList.toggle('active', isLogin);
+    document.getElementById('tabRegister').classList.toggle('active', !isLogin);
+    document.getElementById('formLogin').style.display = isLogin ? 'block' : 'none';
+    document.getElementById('formRegister').style.display = isLogin ? 'none' : 'block';
+    document.getElementById('authMsg').textContent = '';
+  }
+  let authToken = null;
+  let currentUser = null;
+
+  function showUserUI(user) {
+    currentUser = user;
+    document.getElementById('navAuth').style.display = 'none';
+    const nu = document.getElementById('navUser');
+    nu.style.display = 'flex';
+    document.getElementById('navNick').textContent = user.nickname;
+    document.getElementById('navRating').textContent = (user.rating || 1000) + ' FP';
+    const navAv = document.getElementById('navAvatar');
+    if (user.avatar_url) { navAv.src = user.avatar_url; navAv.style.display = ''; }
+    else navAv.style.display = 'none';
+
+    document.getElementById('profileBar').style.display = 'block';
+    const pbAv = document.getElementById('pbAvatar');
+    if (user.avatar_url) { pbAv.src = user.avatar_url; } else { pbAv.style.display = 'none'; }
+    document.getElementById('pbNick').textContent = user.nickname;
+    document.getElementById('pbRating').textContent = user.rating || 1000;
+    document.getElementById('pbWins').textContent = user.wins || 0;
+    document.getElementById('pbLosses').textContent = user.losses || 0;
+    document.getElementById('pbTier').textContent = user.tier || 'Open';
+    if (user.created_at) {
+      document.getElementById('pbSince').textContent = 'Игрок с ' + new Date(user.created_at).toLocaleDateString('ru');
+    }
+  }
+
+  function setUser(user, token) {
+    authToken = token;
+    if (token) sessionStorage.setItem('futurcs_token', token);
+    showUserUI(user);
+  }
+
+  (async () => {
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      if (r.ok) { const u = await r.json(); if (u && u.id) { showUserUI(u); return; } }
+    } catch(_) {}
+    const saved = sessionStorage.getItem('futurcs_token');
+    if (saved) {
+      try {
+        const r = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + saved }, credentials: 'include' });
+        if (r.ok) { const u = await r.json(); if (u && u.id) { setUser(u, saved); return; } }
+        else sessionStorage.removeItem('futurcs_token');
+      } catch(_) {}
+    }
+    if (window.location.search.includes('auth=success')) {
+      history.replaceState({}, '', '/');
+      try {
+        const r2 = await fetch('/api/me', { credentials: 'include' });
+        if (r2.ok) { const u = await r2.json(); if (u && u.id) showUserUI(u); }
+      } catch(_) {}
+    }
+  })();
+
+  // Load live stats
+  (async () => {
+    try {
+      const r = await fetch('/api/stats');
+      if (!r.ok) return;
+      const s = await r.json();
+      document.querySelectorAll('.stats-bar .item').forEach(el => {
+        const label = el.querySelector('.label')?.textContent?.toLowerCase() || '';
+        const numEl = el.querySelector('.num');
+        if (!numEl) return;
+        if (label.includes('игрок') || label.includes('player')) numEl.textContent = Number(s.total_players).toLocaleString('ru');
+        if (label.includes('матч') || label.includes('match')) numEl.textContent = Number(s.total_matches || 0).toLocaleString('ru');
+      });
+    } catch(_) {}
+  })();
+
+  function steamAuth(){
+    window.location.href = '/auth/steam';
+  }
+
+  async function submitAuth(type) {
+    const msg = document.getElementById('authMsg');
+    msg.textContent = '';
+
+    if (type === 'login') {
+      const email = document.getElementById('loginEmail').value.trim();
+      const pass  = document.getElementById('loginPass').value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.style.color='var(--ember)'; msg.textContent='Введите корректный email'; return; }
+      if (pass.length < 1) { msg.style.color='var(--ember)'; msg.textContent='Введите пароль'; return; }
+
+      msg.style.color='var(--text-dim)'; msg.textContent='Входим...';
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ email, password: pass })
+        });
+        const data = await r.json();
+        if (!r.ok) { msg.style.color='var(--ember)'; msg.textContent = data.error || 'Ошибка'; return; }
+        setUser(data.user, data.token);
+        msg.style.color='var(--radar)'; msg.textContent = `Добро пожаловать, ${data.user.nickname}!`;
+        setTimeout(closeAuth, 1200);
+      } catch(_) { msg.style.color='var(--ember)'; msg.textContent='Ошибка соединения'; }
+
+    } else {
+      const nick  = document.getElementById('regNick').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const pass  = document.getElementById('regPass').value;
+      if (nick.length < 3)  { msg.style.color='var(--ember)'; msg.textContent='Никнейм минимум 3 символа'; return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.style.color='var(--ember)'; msg.textContent='Введите корректный email'; return; }
+      if (pass.length < 8)  { msg.style.color='var(--ember)'; msg.textContent='Пароль минимум 8 символов'; return; }
+
+      msg.style.color='var(--text-dim)'; msg.textContent='Создаём аккаунт...';
+      try {
+        const r = await fetch('/api/register', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ nickname: nick, email, password: pass })
+        });
+        const data = await r.json();
+        if (!r.ok) { msg.style.color='var(--ember)'; msg.textContent = data.error || 'Ошибка'; return; }
+        setUser(data.user, data.token);
+        msg.style.color='var(--radar)'; msg.textContent = `Аккаунт создан! Добро пожаловать, ${data.user.nickname}!`;
+        setTimeout(closeAuth, 1500);
+      } catch(_) { msg.style.color='var(--ember)'; msg.textContent='Ошибка соединения'; }
+    }
+  }
+  document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeAuth(); });
+
+  // Next match countdown timer
+  let countdown = 2*3600 + 14*60 + 37;
+  function updateTimer(){
+    if(countdown <= 0) { document.getElementById('nextMatchTimer').textContent = 'LIVE'; return; }
+    countdown--;
+    const h = Math.floor(countdown/3600);
+    const m = Math.floor((countdown%3600)/60);
+    const s = countdown%60;
+    const el = document.getElementById('nextMatchTimer');
+    if(el) el.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  }
+  setInterval(updateTimer, 1000);
+</script>
+
+</body>
+</html>
