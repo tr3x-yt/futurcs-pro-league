@@ -2,7 +2,7 @@
   "name": "futurcs-pro-league",
   "version": "1.0.0",
   "description": "FUTURCS PRO LEAGUE — CS2 competitive platform",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
